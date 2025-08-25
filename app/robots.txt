@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and auth pages
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /account/
+Disallow: /checkout/
+
+# Disallow search pages to prevent duplicate content
+Disallow: /search
+
+# Allow important pages
+Allow: /products/
+Allow: /categories/
+
+# Sitemap location
+Sitemap: https://artisan-leather-co.vercel.app/sitemap.xml
