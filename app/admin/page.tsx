@@ -8,26 +8,40 @@ export default async function AdminDashboard() {
   await requireAdmin()
   const supabase = await createClient()
 
-  // Fetch dashboard stats
-  const [
-    { count: productCount },
-    { count: orderCount },
-    { count: userCount },
-    { data: recentOrders },
-    { data: totalRevenue },
-  ] = await Promise.all([
-    supabase.from("products").select("*", { count: "exact", head: true }),
-    supabase.from("orders").select("*", { count: "exact", head: true }),
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-    supabase
-      .from("orders")
-      .select("*, profiles(first_name, last_name)")
-      .order("created_at", { ascending: false })
-      .limit(5),
-    supabase.from("orders").select("total_amount"),
-  ])
+  // Fetch dashboard stats with optimized queries and error handling
+  let productCount = 0
+  let orderCount = 0
+  let userCount = 0
+  let recentOrders: any[] = []
+  let revenue = 0
 
-  const revenue = totalRevenue?.reduce((sum, order) => sum + order.total_amount, 0) || 0
+  try {
+    // Use Promise.allSettled for better error handling
+    const results = await Promise.allSettled([
+      supabase.from("products").select("*", { count: "exact", head: true }),
+      supabase.from("orders").select("*", { count: "exact", head: true }),
+      supabase.from("profiles").select("*", { count: "exact", head: true }),
+      supabase
+        .from("orders")
+        .select("id, order_number, total_amount, status, created_at, profiles(first_name, last_name)")
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase.from("orders").select("total_amount"),
+    ])
+
+    // Extract results with fallbacks
+    productCount = results[0].status === 'fulfilled' ? results[0].value.count || 0 : 0
+    orderCount = results[1].status === 'fulfilled' ? results[1].value.count || 0 : 0
+    userCount = results[2].status === 'fulfilled' ? results[2].value.count || 0 : 0
+    recentOrders = results[3].status === 'fulfilled' ? results[3].value.data || [] : []
+    
+    if (results[4].status === 'fulfilled' && results[4].value.data) {
+      revenue = results[4].value.data.reduce((sum: number, order: any) => sum + (order.total_amount || 0), 0)
+    }
+  } catch (error) {
+    console.error("Dashboard loading error:", error)
+    // Dashboard will render with default values (0s and empty arrays)
+  }
 
   return (
     <div className="min-h-screen bg-muted/30">

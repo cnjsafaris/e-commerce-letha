@@ -27,12 +27,34 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
       if (error) throw error
-      router.push("/account")
+
+      // Check if this is the admin user for immediate redirect
+      if (email === "jabezmageto78@gmail.com") {
+        router.push("/admin")
+        return
+      }
+
+      // For non-admin users, check their profile role for proper redirect
+      if (authData.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", authData.user.id)
+          .single()
+
+        if (profile?.role === "admin") {
+          router.push("/admin")
+        } else {
+          router.push("/account")
+        }
+      } else {
+        router.push("/account")
+      }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
@@ -77,7 +99,11 @@ export default function LoginPage() {
                   </div>
                   {error && <p className="text-sm text-destructive">{error}</p>}
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Signing in..." : "Sign In"}
+                    {isLoading ? (
+                      email === "jabezmageto78@gmail.com" ? 
+                        "Redirecting to admin dashboard..." : 
+                        "Signing in..."
+                    ) : "Sign In"}
                   </Button>
                 </div>
                 <div className="mt-4 text-center text-sm">

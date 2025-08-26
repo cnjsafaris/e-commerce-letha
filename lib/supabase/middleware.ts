@@ -29,6 +29,33 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Handle admin routes with optimized auth check
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/auth/login"
+      return NextResponse.redirect(url)
+    }
+
+    // Fast-track admin access for the known admin user
+    if (user.email === "jabezmageto78@gmail.com") {
+      return supabaseResponse
+    }
+
+    // Check admin role for other authenticated users
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+
+    if (!profile || profile.role !== "admin") {
+      const url = request.nextUrl.clone()
+      url.pathname = "/"
+      return NextResponse.redirect(url)
+    }
+  }
+
   // Allow access to auth pages and home page without authentication
   if (
     !user &&
@@ -39,8 +66,8 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname !== "/cart" &&
     request.nextUrl.pathname !== "/checkout"
   ) {
-    // Redirect to login for protected pages like account, admin
-    if (request.nextUrl.pathname.startsWith("/account") || request.nextUrl.pathname.startsWith("/admin")) {
+    // Redirect to login for protected pages like account
+    if (request.nextUrl.pathname.startsWith("/account")) {
       const url = request.nextUrl.clone()
       url.pathname = "/auth/login"
       return NextResponse.redirect(url)
