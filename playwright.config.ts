@@ -53,11 +53,9 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npmun dev -- -p 3001vv -- -p 3001 -- -p 3001',
+    command: 'npx next dev -p 3001',
     url: 'http://localhost:3001',
     reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-    timeout: 120000,
     timeout: 120000,
   },
 });
